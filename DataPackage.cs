@@ -158,7 +158,7 @@ namespace UserForm
                 StatusCode = Convert.ToHexString([statusRead]),
             };
         }
-        public void error_code(string error)
+        public static void error_code(string error)
         {
             switch (error)
             {

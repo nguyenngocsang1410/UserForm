@@ -12,7 +12,6 @@ namespace UserForm
         public List<RegisterItem> Registers { get; set; } = GetRegisterList(Name);
 
         public SlaveData Info { get; set; } = slavesInfo.Find(item => item.Name == Name) ?? new();
-        public byte[] Buffer { get; set; } = new byte[32];
 
         private static readonly List<SlaveData> slavesInfo = new()
         {
@@ -379,6 +378,17 @@ namespace UserForm
                     return [];
             }
         }
+        public List<RegisterItem> CopyRegister()
+        {
+            List<RegisterItem> retList = GetRegisterList(Name);
+
+            foreach (RegisterItem reg in retList)
+            {
+                reg.Value = Registers.Find(item => item.Addr == reg.Addr)?.Value ?? 0;
+            }
+
+            return retList;
+        }
     }
 
 
@@ -387,6 +397,7 @@ namespace UserForm
         public string Name { get; set; } = "";
         public int Addr { get; set; } = 0;
         public ushort Value { get; set; } = 0;
+        public bool[] BitValue { get; set; } = [];
         public string[] BitName { get; set; } = [];
     }
     public class SlaveData
@@ -398,38 +409,38 @@ namespace UserForm
     }
     public static class SlaveAddress
     {
-        public const int QEC_TX1      = 0x01;
-        public const int FIR_TX1      = 0x02;
-        public const int QEC_RX1      = 0x03;
-        public const int FIR_RX1      = 0x04;
-        public const int QEC_ORX1     = 0x05;
-        public const int FIR_ORX1     = 0x06;
-        public const int QEC_TX2      = 0x07;
-        public const int FIR_TX2      = 0x08;
-        public const int QEC_RX2      = 0x09;
-        public const int FIR_RX2      = 0x0A;
-        public const int QEC_ORX2     = 0x0B;
-        public const int FIR_ORX2     = 0x0C;
-        public const int RX1          = 0x0D;
-        public const int RX2          = 0x0E;
-        public const int ORX1         = 0x0F;
-        public const int ORX2         = 0x10;
-        public const int TX1          = 0x11;
-        public const int TX2          = 0x12;
-        public const int PLL          = 0x13;
-        public const int ADC1         = 0x14;
-        public const int ADC2         = 0x15;
-        public const int ADC3         = 0x16;
-        public const int ADC4         = 0x17;
-        public const int DAC1         = 0x18;
-        public const int DAC2         = 0x19;
-        public const int PHY          = 0x1A;
-        public const int RX1_RSSI     = 0x1B;
-        public const int RX2_RSSI     = 0x1C;
-        public const int JESD204_RX   = 0x1D;
-        public const int JESD204_TX1  = 0x1E;
-        public const int JESD204_TX2  = 0x1F;
-        public const int NA           = 0xFF;
+        public const int QEC_TX1 = 0x01;
+        public const int FIR_TX1 = 0x02;
+        public const int QEC_RX1 = 0x03;
+        public const int FIR_RX1 = 0x04;
+        public const int QEC_ORX1 = 0x05;
+        public const int FIR_ORX1 = 0x06;
+        public const int QEC_TX2 = 0x07;
+        public const int FIR_TX2 = 0x08;
+        public const int QEC_RX2 = 0x09;
+        public const int FIR_RX2 = 0x0A;
+        public const int QEC_ORX2 = 0x0B;
+        public const int FIR_ORX2 = 0x0C;
+        public const int RX1 = 0x0D;
+        public const int RX2 = 0x0E;
+        public const int ORX1 = 0x0F;
+        public const int ORX2 = 0x10;
+        public const int TX1 = 0x11;
+        public const int TX2 = 0x12;
+        public const int PLL = 0x13;
+        public const int ADC1 = 0x14;
+        public const int ADC2 = 0x15;
+        public const int ADC3 = 0x16;
+        public const int ADC4 = 0x17;
+        public const int DAC1 = 0x18;
+        public const int DAC2 = 0x19;
+        public const int PHY = 0x1A;
+        public const int RX1_RSSI = 0x1B;
+        public const int RX2_RSSI = 0x1C;
+        public const int JESD204_RX = 0x1D;
+        public const int JESD204_TX1 = 0x1E;
+        public const int JESD204_TX2 = 0x1F;
+        public const int NA = 0xFF;
     }
 
 
