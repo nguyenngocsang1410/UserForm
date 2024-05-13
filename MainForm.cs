@@ -1,6 +1,7 @@
 ﻿using System.Drawing.Drawing2D;
 using System.IO.Ports;
 using System.Security.Cryptography;
+using System.Windows.Forms;
 
 namespace UserForm
 {
@@ -28,7 +29,7 @@ namespace UserForm
             InitializeComponent();
         }
 
-
+        #region Main Activity
         private void MainForm_Load(object sender, EventArgs e)
         {
             SetUpBitGrid(0);
@@ -51,11 +52,11 @@ namespace UserForm
             foreach (string s in baudRate)
                 cbBaudRate.Items.Add(s);
 
-            cbBaudRate.SelectedIndex = 0;
-            if (serial.BaudRate != 0)
-                cbBaudRate.SelectedIndex = cbBaudRate.Items.IndexOf(serial.BaudRate);
-            if (cbBaudRate.SelectedIndex < 0)
-                cbBaudRate.SelectedIndex = 0;
+            cbBaudRate.SelectedIndex = 4;
+            //if (serial.BaudRate != 0)
+            //    cbBaudRate.SelectedIndex = cbBaudRate.Items.IndexOf(serial.BaudRate);
+            //if (cbBaudRate.SelectedIndex < 0)
+            //    cbBaudRate.SelectedIndex = 0;
 
             // Disable control group
             tab_Main.Enabled = false;
@@ -65,7 +66,6 @@ namespace UserForm
         {
             UpdateDataGridView();
         }
-
         private void SetUpBitGrid(int gridIdx)
         {
             if (gridIdx >= db_Slaves.Count) return;
@@ -74,8 +74,8 @@ namespace UserForm
             SPISlave slave = db_Slaves[gridIdx];
             shadowSlaves[gridIdx].Registers = slave.CopyRegister();
 
-            const int rssi_col_width = 150;
-            const int pll_col_width = 150;
+            const int rssi_col_width = 170;
+            const int pll_col_width = 170;
 
             DataGridView? dgv = null;
 
@@ -101,6 +101,12 @@ namespace UserForm
                 return;
 
             dgv.DataSource = slave.Registers;
+
+            foreach (DataGridViewColumn col in dgv.Columns)
+            {
+                col.Width = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.AllCells, false);
+            }
+
             int bit_cols = slave.Registers[0].BitName.Length;
             for (int i = 0; i < bit_cols; i++)
             {
@@ -137,6 +143,8 @@ namespace UserForm
             }
             dgv.Refresh();
 
+            dgv.Columns[0].ReadOnly = true;
+            dgv.Columns[1].ReadOnly = true;
             db_initialized[gridIdx] = true;
         }
         private void UpdateDataGridView()
@@ -204,6 +212,7 @@ namespace UserForm
             }
 
         }
+        #endregion
 
         #region Action Listener
         private void tab_Main_SelectedIndexChanged(object sender, EventArgs e)
@@ -251,7 +260,6 @@ namespace UserForm
         }
         private void bt_connect_Click(object sender, EventArgs e)
         {
-
             if (!serial.IsOpen) // Open port
             {
                 try
@@ -316,6 +324,8 @@ namespace UserForm
             {
                 DataGridView? dgv = null;
                 SPISlave slave;
+                List<int> rowIdx = [];
+
                 switch (tab_Main.SelectedIndex)
                 {
                     case 0:
@@ -338,22 +348,33 @@ namespace UserForm
                 if (dgv.SelectedRows.Count > 0)
                 {
                     foreach (DataGridViewRow row in dgv.SelectedRows)
-                    {
-                        int rowIdx = dgv.Rows.IndexOf(row);
-
-                        int regAddr = slave.Registers[rowIdx].Addr;
-                        int regValue = slave.Registers[rowIdx].Value;
-
-                        // Read this row value
-                        SendRequest(slave.Info.Address, SendCMD.Read, regAddr, regValue);
-                    }
+                        rowIdx.Add(row.Index);
+                }
+                else if (dgv.SelectedCells.Count > 0)
+                {
+                    foreach (DataGridViewCell cell in dgv.SelectedCells)
+                        rowIdx.Add(cell.RowIndex);
                 }
                 else
                 {
-                    foreach (RegisterItem reg in db_Slaves[tab_Main.SelectedIndex].Registers)
+                    foreach (DataGridViewRow row in dgv.Rows)
+                        rowIdx.Add(row.Index);
+                }
+
+                foreach (int idx in rowIdx)
+                {
+                    RegisterItem reg = slave.Registers[idx];
+                    int regAddr = reg.Addr;
+                    int regValue = reg.Value;
+
+                    // Write this row value
+                    DataPackage? retPackage = SendRequest(slave.Info.Address, SendCMD.Read, regAddr, regValue);
+
+                    if (retPackage != null)
                     {
-                        // Read this row value
-                        SendRequest(slave.Info.Address, SendCMD.Read, reg.Addr, reg.Value);
+                        shadowSlaves[tab_Main.SelectedIndex].Registers = db_Slaves[tab_Main.SelectedIndex].CopyRegister();
+                        reg.Value = (ushort)retPackage.RegValue;
+                        reg.BitValue = ConvertByteToBoolArray((ushort)retPackage.RegValue, retPackage.RegValueSize);
                     }
                 }
             }
@@ -378,6 +399,7 @@ namespace UserForm
                     default:
                         break;
                 }
+
                 if (dgv == null)
                     return;
 
@@ -388,6 +410,19 @@ namespace UserForm
                     foreach (DataGridViewRow row in dgv.SelectedRows)
                     {
                         int rowIdx = dgv.Rows.IndexOf(row);
+
+                        int regAddr = slave.Registers[rowIdx].Addr;
+                        int regValue = slave.Registers[rowIdx].Value;
+
+                        // Write this row value
+                        SendRequest(slave.Info.Address, SendCMD.Write, regAddr, regValue);
+                    }
+                }
+                else if (dgv.SelectedCells.Count > 0)
+                {
+                    foreach (DataGridViewCell cell in dgv.SelectedCells)
+                    {
+                        int rowIdx = cell.RowIndex;
 
                         int regAddr = slave.Registers[rowIdx].Addr;
                         int regValue = slave.Registers[rowIdx].Value;
@@ -415,8 +450,15 @@ namespace UserForm
                 SendRequest(slave.Info.Address, SendCMD.Write, reg.Addr, reg.Value);
                 Thread.Sleep(200);
                 // Read request
-                SendRequest(slave.Info.Address, SendCMD.Read, reg.Addr, reg.Value);
+                DataPackage? retPackage = SendRequest(slave.Info.Address, SendCMD.Read, reg.Addr, reg.Value);
                 Thread.Sleep(200);
+
+                if (retPackage != null)
+                {
+                    shadowSlaves[tab_Main.SelectedIndex].Registers = db_Slaves[tab_Main.SelectedIndex].CopyRegister();
+                    reg.Value = (ushort)retPackage.RegValue;
+                    reg.BitValue = ConvertByteToBoolArray((ushort)retPackage.RegValue, retPackage.RegValueSize);
+                }
             }
 
             // Process updated data
@@ -445,15 +487,16 @@ namespace UserForm
             }
         }
         #endregion
+
         #region SPI method
-        public void SendRequest(int slaveAddr, SendCMD write_en, int regAddr, int regValue)
+        public DataPackage? SendRequest(int slaveAddr, SendCMD write_en, int regAddr, int regValue)
         {
             SPISlave? slave = db_Slaves.Find(item => item.Info.Address == slaveAddr);
 
             if (slave == null || slave.Info == null)
             {
                 MessageBox.Show("Unrecognized slave", "Error");
-                return;
+                return null;
             }
 
             DataPackage dataSend = new()
@@ -469,42 +512,81 @@ namespace UserForm
 
             serial.Write(packetSend, 0, packetSend.Length);
 
-            GetResponse(responseHandler: (retPackage) =>
+            Thread.Sleep(500);
+
+            if (write_en == SendCMD.Read)
             {
-                string err;
+                int frmLen = 18;
 
-                if (write_en != retPackage.WriteEn)
-                    err = "0x12";
-                else if (retPackage.SlaveAddr != slaveAddr)
-                    err = "0x12";
-                else if (retPackage.RegAddr != regAddr)
-                    err = "0x12";
-                else if (retPackage.RegAddrSize != slave.Info.RegAddressSize)
-                    err = "0x12";
-                else if (write_en == SendCMD.Write & (retPackage.RegValue != regValue))
-                    err = "0x12";
-                else if (retPackage.RegValueSize != slave.Info.RegValueSize)
-                    err = "0x12";
-                else if (retPackage.StatusCode != "0")
-                    err = retPackage.StatusCode;
-                else err = "0";
+                byte[] readBuffer = new byte[frmLen];
 
-                if (err != "0")
+                int retry_times = 10;
+                int counter = 0;
+                while (true)
                 {
-                    DataPackage.error_code(err);
-                }
 
-                if (write_en == 0)
-                {
-                    shadowSlaves.Find(item => item.Info.Address == slave.Info.Address)!.Registers = slave.CopyRegister();
-                    RegisterItem? reg = slave.Registers.Find(item => item.Addr == regAddr);
-                    if (reg != null)
+                    if (serial.BytesToRead >= frmLen)
                     {
-                        reg.Value = (ushort)retPackage.RegValue;
-                        reg.BitValue = ConvertByteToBoolArray(reg.Value, retPackage.RegValueSize);
+                        int ret;
+                        ret = serial.Read(readBuffer, 0, frmLen);
+                        if (ret < frmLen) MessageBox.Show("Response invalid", "Error");
+                        DataPackage? retPackage = DataPackage.TryParse(readBuffer);
+                        if (retPackage != null)
+                        {
+                            return retPackage;
+                        }
+                        break;
+                    }
+                    else
+                    {
+                        Thread.Sleep(100);
+                        if (counter++ > retry_times)
+                        {
+                            MessageBox.Show("Read timeout!");
+                            break;
+                        }
                     }
                 }
-            });
+            }
+            return null;
+
+            //GetResponse(responseHandler: (retPackage) =>
+            //{
+            //    string err;
+
+            //    if (write_en != retPackage.WriteEn)
+            //        err = "0x12";
+            //    else if (retPackage.SlaveAddr != slaveAddr)
+            //        err = "0x12";
+            //    else if (retPackage.RegAddr != regAddr)
+            //        err = "0x12";
+            //    else if (retPackage.RegAddrSize != slave.Info.RegAddressSize)
+            //        err = "0x12";
+            //    else if (write_en == SendCMD.Write & (retPackage.RegValue != regValue))
+            //        err = "0x12";
+            //    else if (retPackage.RegValueSize != slave.Info.RegValueSize)
+            //        err = "0x12";
+            //    else if (retPackage.StatusCode != "0")
+            //        err = retPackage.StatusCode;
+            //    else err = "0";
+
+            //    if (err != "0")
+            //    {
+            //        DataPackage.error_code(err);
+            //    }
+
+            //    if (write_en == 0)
+            //    {
+            //        shadowSlaves.Find(item => item.Info.Address == slave.Info.Address)!.Registers = slave.CopyRegister();
+            //        RegisterItem? reg = slave.Registers.Find(item => item.Addr == regAddr);
+            //        if (reg != null)
+            //        {
+            //            reg.Value = (ushort)retPackage.RegValue;
+            //            reg.BitValue = ConvertByteToBoolArray(reg.Value, retPackage.RegValueSize);
+            //        }
+            //    }
+            //});
+
         }
         public async void GetResponse(int timeout = 5000, Action<DataPackage>? responseHandler = null)
         {
@@ -551,6 +633,7 @@ namespace UserForm
             }
         }
         #endregion
+
         #region Utils
         private static ushort ConvertBoolArrayToByte(bool[] source)
         {
@@ -585,5 +668,103 @@ namespace UserForm
             return result;
         }
         #endregion
+
+        #region DataGridView
+        private void dgv_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.ColumnIndex == 2)
+            {
+                RegisterItem reg = db_Slaves[tab_Main.SelectedIndex].Registers[e.RowIndex];
+                reg.BitValue = ConvertByteToBoolArray(reg.Value,
+                    db_Slaves[tab_Main.SelectedIndex].Info.RegValueSize);
+            }
+        }
+        private void dgv_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
+        {
+            e.Control.KeyPress -= new KeyPressEventHandler(Column_Value_KeyPress);
+            if (((DataGridView)sender).CurrentCell.ColumnIndex == 2) //Desired Column
+            {
+                if (e.Control is TextBox tb)
+                {
+                    tb.KeyPress += new KeyPressEventHandler(Column_Value_KeyPress);
+                }
+            }
+
+        }
+        private void Column_Value_KeyPress(object? sender, KeyPressEventArgs e)
+        {
+            // allowed only numeric value  ex.10
+            //if (!char.IsControl(e.KeyChar)
+            //    && !char.IsDigit(e.KeyChar))
+            //{
+            //    e.Handled = true;
+            //}
+
+            // allowed numeric and one dot  ex. 10.23
+            if (sender != null)
+            {
+                if (!((TextBox)sender).Text.StartsWith("0x"))
+                {
+                    if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar) && !(e.KeyChar == 'x'))
+                    {
+                        e.Handled = true;
+                    }
+                    if (e.KeyChar == 'x')
+                    {
+                        if (((TextBox)sender).Text.IndexOf('x') > -1)
+                        {
+                            e.Handled = true;
+                        }
+                        else if (((TextBox)sender).Text != "0")
+                        {
+                            e.Handled = true;
+                        }
+                    }
+                }
+                else
+                {
+                    char[] allowedChars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                                       'A', 'B', 'C', 'D', 'E', 'F',
+                                       'a', 'b', 'c', 'd', 'e', 'f'];
+                    if (!char.IsControl(e.KeyChar) && !allowedChars.Contains(e.KeyChar))
+                    {
+                        e.Handled = true;
+                    }
+                }
+            }
+        }
+        private void dgv_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            try
+            {
+                int val = Convert.ToInt32(
+                    ((DataGridView)sender).CurrentCell.EditedFormattedValue.ToString(), 16);
+                ((DataGridView)sender).CancelEdit();
+
+                RegisterItem reg = db_Slaves[tab_Main.SelectedIndex].Registers[e.RowIndex];
+                reg.Value = (ushort)val;
+                reg.BitValue = ConvertByteToBoolArray(reg.Value,
+                    db_Slaves[tab_Main.SelectedIndex].Info.RegValueSize);
+
+                ((DataGridView)sender).RefreshEdit();
+            }
+            catch (Exception)
+            {
+                ((DataGridView)sender).CancelEdit();
+                ((DataGridView)sender).ClearSelection();
+            }
+        }
+        #endregion
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (serial != null)
+            {
+                if (serial.IsOpen)
+                    serial.Close();
+
+                serial.Dispose();
+            }
+        }
     }
 }

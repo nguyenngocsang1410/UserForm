@@ -52,7 +52,7 @@ namespace UserForm
             // Reg address size 1 byte
             package[idx++] = (byte)(RegAddrSize & 0xFF);
 
-            if (WriteEn == SendCMD.Read)
+            if (WriteEn == SendCMD.Write || WriteEn == SendCMD.WriteAck)
             {
                 // Reg data 4 bytes
                 package[idx++] = (byte)(RegValue & 0xFF);
@@ -196,6 +196,7 @@ namespace UserForm
         Write = 0x01,
         WriteAck = 0x02,
         Read = 0x03,
+        AutoRead = 0x04,
         NA = 0x00,
     }
 }
