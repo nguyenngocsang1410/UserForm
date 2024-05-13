@@ -5,7 +5,7 @@ namespace UserForm
 {
     public partial class ConnectForm : Form
     {
-        SerialPort serialPort = new();
+        public SerialPort serialPort = new();
         public Serial serial;
 
         public Action? closeListener;
@@ -16,11 +16,12 @@ namespace UserForm
         public ConnectForm(Serial serial, Action closeListener)
         {
             this.serial = serial;
-            if (serial.port.IsOpen)
+            if (serial.IsOpen)
             {
-                serial.port.Close();
+                serial.Close();
             }
             this.closeListener = closeListener;
+
             InitializeComponent();
         }
 
@@ -87,7 +88,6 @@ namespace UserForm
             string[] str = SerialPort.GetPortNames();
             if (str == null)
             {
-                //MessageBox.Show("本机没有串口！", "Error");
                 return;
             }
 
@@ -129,7 +129,7 @@ namespace UserForm
                     serialPort.BaudRate = iBaudRate;
                     serialPort.DataBits = iDataBit;
 
-                    switch (strStopBit)            //停止位
+                    switch (strStopBit)
                     {
                         case "1":
                             serialPort.StopBits = StopBits.One;
@@ -141,10 +141,9 @@ namespace UserForm
                             serialPort.StopBits = StopBits.Two;
                             break;
                         default:
-                            //MessageBox.Show("Error：停止位参数不正确!", "Error");
                             break;
                     }
-                    switch (strCheckBit)             //校验位
+                    switch (strCheckBit)
                     {
                         case "None":
                             serialPort.Parity = Parity.None;
@@ -156,7 +155,6 @@ namespace UserForm
                             serialPort.Parity = Parity.Even;
                             break;
                         default:
-                            //MessageBox.Show("Error：校验位参数不正确!", "Error");
                             break;
                     }
 
@@ -165,7 +163,6 @@ namespace UserForm
                     //    saveDataFS = File.Create(saveDataFile);
                     //}
 
-                    //打开串口
                     serialPort.Open();
 
                     //Setup completed. Disable setting options
@@ -224,9 +221,9 @@ namespace UserForm
                 //dateTimeNow.GetDateTimeFormats();
                 tbReceive.Text += string.Format("{0}\r\n", dateTimeNow);
                 //dateTimeNow.GetDateTimeFormats('f')[0].ToString() + "\r\n";
-                tbReceive.ForeColor = Color.Red;    //改变字体的颜色
+                tbReceive.ForeColor = Color.Red;
 
-                if (rbtReceiveDataASCII.Checked == true) //接收格式为ASCII
+                if (rbtReceiveDataASCII.Checked == true)
                 {
                     try
                     {
@@ -252,7 +249,6 @@ namespace UserForm
                     }
                     catch (System.Exception ex)
                     {
-                        //MessageBox.Show(ex.Message, "你波特率是不是有问题？？？");
                         return;
                     }
 
@@ -297,7 +293,6 @@ namespace UserForm
             }
             else
             {
-                //MessageBox.Show("请打开某个串口", "错误提示");
             }
         }
 
@@ -315,9 +310,9 @@ namespace UserForm
             if (ports != null)
             {
                 cbCom.SelectedIndex = 0;
-                if (serial.port.PortName != null)
+                if (serial.PortName != null)
                     foreach (string item in cbCom.Items)
-                        if (item == serial.port.PortName)
+                        if (item == serial.PortName)
                             cbCom.SelectedIndex = cbCom.Items.IndexOf(item);
             }
 
@@ -327,11 +322,11 @@ namespace UserForm
                 cbBaudRate.Items.Add(s);
             }
             cbBaudRate.SelectedIndex = 0;
-            if (serial.port.BaudRate != 0)
+            if (serial.BaudRate != 0)
                 for (int i = 0; i < baudRate.Length; i++)
                 {
                     int val = Convert.ToInt32(baudRate[i]);
-                    if (val == serial.port.BaudRate)
+                    if (val == serial.BaudRate)
                     { cbBaudRate.SelectedIndex = i; }
                 }
 
@@ -362,7 +357,7 @@ namespace UserForm
             string? strCheckBit      = (cbCheckBit.SelectedItem)?.ToString();
             string? strStopBit       = (cbStopBit.SelectedItem)?.ToString();
 
-            switch (strStopBit)            //停止位
+            switch (strStopBit)
             {
                 case "1":
                     serialPort.StopBits = StopBits.One;
@@ -374,10 +369,9 @@ namespace UserForm
                     serialPort.StopBits = StopBits.Two;
                     break;
                 default:
-                    //MessageBox.Show("Error：停止位参数不正确!", "Error");
                     break;
             }
-            switch (strCheckBit)             //校验位
+            switch (strCheckBit)
             {
                 case "None":
                     serialPort.Parity = Parity.None;
@@ -389,7 +383,6 @@ namespace UserForm
                     serialPort.Parity = Parity.Even;
                     break;
                 default:
-                    //MessageBox.Show("Error：校验位参数不正确!", "Error");
                     break;
             }
 
@@ -412,11 +405,11 @@ namespace UserForm
             if (serialPort.IsOpen)
                 serialPort.Close();
 
-            serial.port.PortName = (cbCom.SelectedItem)?.ToString() ?? "";
-            serial.port.BaudRate = Convert.ToInt32((cbBaudRate.SelectedItem)?.ToString());
-            serial.port.DataBits = serialPort.DataBits;
-            serial.port.Parity = serialPort.Parity;
-            serial.port.StopBits = serialPort.StopBits;
+            serial.PortName = (cbCom.SelectedItem)?.ToString() ?? "";
+            serial.BaudRate = Convert.ToInt32((cbBaudRate.SelectedItem)?.ToString());
+            serial.DataBits = serialPort.DataBits;
+            serial.Parity = serialPort.Parity;
+            serial.StopBits = serialPort.StopBits;
 
             serialPort.Dispose();
             closeListener?.Invoke();

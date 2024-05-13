@@ -9,7 +9,7 @@ namespace UserForm
     public class DataPackage
     {
         public int SlaveAddr { get; set; } = SlaveAddress.NA;
-        public int WriteEn { get; set; } = 0x00;
+        public SendCMD WriteEn { get; set; } = SendCMD.NA;
         public int RegAddr { get; set; } = 0;
         public int RegAddrSize { get; set; } = 0;
         public int RegValue { get; set; } = 0;
@@ -52,7 +52,7 @@ namespace UserForm
             // Reg address size 1 byte
             package[idx++] = (byte)(RegAddrSize & 0xFF);
 
-            if (WriteEn == 0x01)
+            if (WriteEn == SendCMD.Read)
             {
                 // Reg data 4 bytes
                 package[idx++] = (byte)(RegValue & 0xFF);
@@ -150,7 +150,7 @@ namespace UserForm
             return new DataPackage()
             {
                 SlaveAddr = slaveAddrRead,
-                WriteEn = writeEnRead,
+                WriteEn = (SendCMD)writeEnRead,
                 RegAddr = regAddrRead,
                 RegAddrSize = regAddrSizeRead,
                 RegValue = regValueRead,
@@ -190,5 +190,12 @@ namespace UserForm
                 default: break;
             }
         }
+    }
+    public enum SendCMD
+    {
+        Write = 0x01,
+        WriteAck = 0x02,
+        Read = 0x03,
+        NA = 0x00,
     }
 }

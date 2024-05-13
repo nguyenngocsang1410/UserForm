@@ -385,12 +385,14 @@ namespace UserForm
             foreach (RegisterItem reg in retList)
             {
                 reg.Value = Registers.Find(item => item.Addr == reg.Addr)?.Value ?? 0;
-            }
 
+                RegisterItem? thisReg = Registers.Find(item => item.Addr == reg.Addr);
+                if (thisReg != null)
+                    reg.BitValue = [.. thisReg.BitValue];
+            }
             return retList;
         }
     }
-
 
     public class RegisterItem
     {
