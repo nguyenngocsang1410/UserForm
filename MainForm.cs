@@ -16,7 +16,6 @@ namespace UserForm
         public bool SPIInTransmission = false;
         public List<SPISlave> shadowSlaves = [];
 
-
         public MainForm()
         {
             CreateDB();
@@ -40,7 +39,7 @@ namespace UserForm
                 cbCom.Items.Add(port);
             }
 
-            if (ports != null)
+            if (ports.Length > 0)
             {
                 cbCom.SelectedIndex = cbCom.Items.IndexOf(serial.PortName);
 
@@ -61,6 +60,9 @@ namespace UserForm
             // Disable control group
             tab_Main.Enabled = false;
             groupBox2.Enabled = false;
+
+            CheckForIllegalCrossThreadCalls = false;
+            serial.DataReceived += new SerialDataReceivedEventHandler(dataReceived);
         }
         private void UpdateTimer_Tick(object sender, EventArgs e)
         {
@@ -444,14 +446,14 @@ namespace UserForm
         private void bt_verify_Click(object sender, EventArgs e)
         {
             SPISlave slave = db_Slaves[tab_Main.SelectedIndex];
-            foreach (RegisterItem reg in db_Slaves[tab_Main.SelectedIndex].Registers)
+            foreach (RegisterItem reg in slave.Registers)
             {
                 // Write to reg and read back
                 SendRequest(slave.Info.Address, SendCMD.Write, reg.Addr, reg.Value);
-                Thread.Sleep(200);
+                Thread.Sleep(100);
                 // Read request
                 DataPackage? retPackage = SendRequest(slave.Info.Address, SendCMD.Read, reg.Addr, reg.Value);
-                Thread.Sleep(200);
+                Thread.Sleep(100);
 
                 if (retPackage != null)
                 {
@@ -509,45 +511,60 @@ namespace UserForm
                 WriteEn = write_en
             };
             byte[] packetSend = dataSend.CreatePackage();
-
+            DateTime dateTimeNow = DateTime.Now;
+            //dateTimeNow.GetDateTimeFormats();
+            string text = string.Format("{0}\r\n--> ", dateTimeNow);
             serial.Write(packetSend, 0, packetSend.Length);
 
-            Thread.Sleep(500);
-
-            if (write_en == SendCMD.Read)
+            foreach (var value in packetSend)
             {
-                int frmLen = 18;
+                // Convert the decimal value to a hexadecimal value in string form.
+                string hexOutput = String.Format("{0:X2}", value);
+                text += (hexOutput + " ");
 
-                byte[] readBuffer = new byte[frmLen];
-
-                int retry_times = 10;
-                int counter = 0;
-                while (true)
-                {
-
-                    if (serial.BytesToRead >= frmLen)
-                    {
-                        int ret;
-                        ret = serial.Read(readBuffer, 0, frmLen);
-                        if (ret < frmLen) MessageBox.Show("Response invalid", "Error");
-                        DataPackage? retPackage = DataPackage.TryParse(readBuffer);
-                        if (retPackage != null)
-                        {
-                            return retPackage;
-                        }
-                        break;
-                    }
-                    else
-                    {
-                        Thread.Sleep(100);
-                        if (counter++ > retry_times)
-                        {
-                            MessageBox.Show("Read timeout!");
-                            break;
-                        }
-                    }
-                }
             }
+            text += "\r\n";
+
+            tbMsg.AppendText(text);
+            tbMsg.SelectionStart = tbMsg.TextLength;
+            tbMsg.ScrollToCaret();//Return to cursor
+
+            //Thread.Sleep(500);
+
+            //if (write_en == SendCMD.Read)
+            //{
+            //    int frmLen = 18;
+
+            //    byte[] readBuffer = new byte[frmLen];
+
+            //    int retry_times = 10;
+            //    int counter = 0;
+            //    while (true)
+            //    {
+
+            //        if (serial.BytesToRead >= frmLen)
+            //        {
+            //            int ret;
+            //            ret = serial.Read(readBuffer, 0, frmLen);
+            //            if (ret < frmLen) MessageBox.Show("Response invalid", "Error");
+            //            DataPackage? retPackage = DataPackage.TryParse(readBuffer);
+            //            if (retPackage != null)
+            //            {
+            //                return retPackage;
+            //            }
+            //            break;
+            //        }
+            //        else
+            //        {
+            //            Thread.Sleep(100);
+            //            if (counter++ > retry_times)
+            //            {
+            //                MessageBox.Show("Read timeout!");
+            //                break;
+            //            }
+            //        }
+            //    }
+            //}
             return null;
 
             //GetResponse(responseHandler: (retPackage) =>
@@ -632,6 +649,75 @@ namespace UserForm
                 return;
             }
         }
+        private void dataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            if (serial.IsOpen && serial.BytesToRead >= 18)
+            {
+                byte[] values = new byte[18];
+                DateTime dateTimeNow = DateTime.Now;
+                //dateTimeNow.GetDateTimeFormats();
+                string datetimeText = string.Format("{0}\r\n", dateTimeNow);
+                string text = "\t\t<-- ";
+                //dateTimeNow.GetDateTimeFormats('f')[0].ToString() + "\r\n";
+                //tbMsg.ForeColor = Color.Red;
+                try
+                {
+                    serial.Read(values, 0, 18);
+                    foreach (var value in values)
+                    {
+                        // Convert the decimal value to a hexadecimal value in string form.
+                        string hexOutput = String.Format("{0:X2}", value);
+                        text += hexOutput + " ";
+
+                    }
+                    string spaces = new(' ', text.Length - datetimeText.Length);
+                    text = spaces + datetimeText + text + "\r\n";
+                    tbMsg.AppendText(text);
+                    tbMsg.SelectionStart = tbMsg.TextLength;
+                    tbMsg.ScrollToCaret();//Return to cursor
+
+                    //// save data to file
+                    //if (saveDataFS != null)
+                    //{
+                    //    byte[] info = new UTF8Encoding(true).GetBytes(input + "\r\n");
+                    //    saveDataFS.Write(info, 0, info.Length);
+                    //}
+
+
+                }
+                catch (System.Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Error");
+                    tbMsg.Text = "";//Clean
+                }
+
+                if (values.Length != 18)
+                    tbMsg.AppendText("Invalid data frame!\r\n");
+                else
+                {
+                    DataPackage? retPackage = DataPackage.TryParse(values);
+
+                    shadowSlaves[tab_Main.SelectedIndex].Registers = db_Slaves[tab_Main.SelectedIndex].CopyRegister();
+                    RegisterItem? reg = null;
+                    if (retPackage != null && retPackage.WriteEn == SendCMD.Read)
+                        try
+                        {
+                            SPISlave? slave = db_Slaves.Find(item => item.Info.Address == retPackage.SlaveAddr);
+                            reg = slave?.Registers.Find(item => item.Addr == retPackage.RegAddr);
+                            if (reg != null && slave != null)
+                            {
+                                reg.Value = (ushort)retPackage.RegValue;
+                                reg.BitValue = ConvertByteToBoolArray(reg.Value, slave.Info.RegValueSize);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(ex.Message);
+                        }
+                }
+            }
+        }
+
         #endregion
 
         #region Utils
@@ -766,5 +852,6 @@ namespace UserForm
                 serial.Dispose();
             }
         }
+
     }
 }

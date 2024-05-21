@@ -21,7 +21,7 @@ namespace UserForm
 
         public byte[] CreatePackage()
         {
-            // [HEADER:1][LEN:2][CID:1][SLAVE A:1][REG A:4][REG A S:1][REG V:4][REG V S:1][CRC:2]
+            // [HEADER:1][LEN:2][CID:1][SLAVE A:1][REG A:4][REG A S:1][REG V S:1][Number of regs:4][CRC:2]
             // [1 + 2]*0 + 1 + 1 + 4 + 1 + 4 + 1 + 2 
             int frmLen = 17;
             int cmdLen = frmLen - 1 - 2;
@@ -59,17 +59,20 @@ namespace UserForm
                 package[idx++] = (byte)((RegValue >> 8) & 0xFF);
                 package[idx++] = (byte)((RegValue >> 16) & 0xFF);
                 package[idx++] = (byte)((RegValue >> 24) & 0xFF);
+                // Reg data size 1 byte
+                package[idx++] = (byte)(RegValueSize & 0xFF);
             }
             else
             {
-                package[idx++] = 0;
-                package[idx++] = 0;
-                package[idx++] = 0;
-                package[idx++] = 0;
-            }
+                package[idx++] = (byte)(RegValueSize & 0xFF);
 
-            // Reg data size 1 byte
-            package[idx++] = (byte)(RegValueSize & 0xFF);
+                UInt32 numRegs = 1;
+
+                package[idx++] = (byte)(numRegs & 0xFF);
+                package[idx++] = (byte)((numRegs >> 8) & 0xFF);
+                package[idx++] = (byte)((numRegs >> 16) & 0xFF);
+                package[idx++] = (byte)((numRegs >> 24) & 0xFF);
+            }
 
             // Check sum 2 bytes
             for (int i = 0; i < frmLen - 2; i++)
@@ -94,7 +97,7 @@ namespace UserForm
             if (package.Length != frmLen)
                 throw new Exception("Invalid data package");
 
-            int checkSum = 0;
+            UInt16 checkSum = 0;
             for (int i = 0; i < frmLen - 2; i++)
             {
                 checkSum += package[i];
@@ -110,13 +113,13 @@ namespace UserForm
                               + (responseData[2] << 16) + (responseData[3] << 24);
             int regAddrSizeRead = responseData[4];
 
-            int regValueRead = responseData[5] + (responseData[6] << 8)
-                              + (responseData[7] << 16) + (responseData[8] << 24);
-            int regValueSizeRead = responseData[9];
+            int regValueSizeRead = responseData[5];
+            int regValueRead = responseData[6] + (responseData[7] << 8)
+                              + (responseData[8] << 16) + (responseData[9] << 24);
 
             byte statusRead = responseData[10];
 
-            int csumRead = package[frmLen - 2] + package[frmLen - 1];
+            UInt16 csumRead = (ushort)((package[frmLen - 2] & 0xFF) + ((package[frmLen - 1] << 8) & 0xFF00));
 
             string err;
             if (package[0] != PKG_HEADER_ACK)

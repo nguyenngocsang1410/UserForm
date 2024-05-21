@@ -60,22 +60,39 @@ namespace UserForm
                 return;
             }
 
-            string strSend = tbTransmit.Text;
             if (rbtSendDataASCII.Checked == true)
             {
+                string strSend = tbTransmit.Text;
                 serialPort.WriteLine(strSend);
 
             }
             else
             {
-                char[] values = strSend.ToCharArray();
-                foreach (char letter in values)
+                try
                 {
-                    // Get the integral value of the character.
-                    int value = Convert.ToInt32(letter);
-                    // Convert the decimal value to a hexadecimal value in string form.
-                    string hexIutput = string.Format("{0:X}", value);
-                    serialPort.WriteLine(hexIutput);
+                    // Read the hex string from the TextBox
+                    string hexString = tbTransmit.Text;
+
+                    // Split the hex string into an array of hex values
+                    string[] hexValues = hexString.Split(' ');
+
+                    // Convert each hex value to a byte and store in a byte array
+                    byte[] bytes = new byte[hexValues.Length];
+                    for (int i = 0; i < hexValues.Length; i++)
+                    {
+                        bytes[i] = Convert.ToByte(hexValues[i], 16);
+                    }
+
+                    // Send the byte array to the SerialPort
+                    serialPort.Write(bytes, 0, bytes.Length);
+                }
+                catch (FormatException ex)
+                {
+                    MessageBox.Show("Invalid hex format. Please enter a valid hex string.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -116,14 +133,14 @@ namespace UserForm
                         return;
                     }
 
-                    string? strSerialName    = (cbCom.SelectedItem)?.ToString();
-                    string? strBaudRate      = (cbBaudRate.SelectedItem)?.ToString();
-                    string? strDataBit       = (cbDataBit.SelectedItem)?.ToString();
-                    string? strCheckBit      = (cbCheckBit.SelectedItem)?.ToString();
-                    string? strStopBit       = (cbStopBit.SelectedItem)?.ToString();
+                    string? strSerialName = (cbCom.SelectedItem)?.ToString();
+                    string? strBaudRate = (cbBaudRate.SelectedItem)?.ToString();
+                    string? strDataBit = (cbDataBit.SelectedItem)?.ToString();
+                    string? strCheckBit = (cbCheckBit.SelectedItem)?.ToString();
+                    string? strStopBit = (cbStopBit.SelectedItem)?.ToString();
 
                     Int32 iBaudRate = Convert.ToInt32(strBaudRate);
-                    Int32 iDataBit  = Convert.ToInt32(strDataBit);
+                    Int32 iDataBit = Convert.ToInt32(strDataBit);
 
                     serialPort.PortName = strSerialName;
                     serialPort.BaudRate = iBaudRate;
@@ -247,7 +264,7 @@ namespace UserForm
                         //    saveDataFS.Write(info, 0, info.Length);
                         //}
                     }
-                    catch (System.Exception ex)
+                    catch (Exception ex)
                     {
                         return;
                     }
@@ -351,11 +368,11 @@ namespace UserForm
             }
             cbStopBit.SelectedIndex = 0;
 
-            string? strSerialName    = (cbCom.SelectedItem)?.ToString();
-            string? strBaudRate      = (cbBaudRate.SelectedItem)?.ToString();
-            string? strDataBit       = (cbDataBit.SelectedItem)?.ToString();
-            string? strCheckBit      = (cbCheckBit.SelectedItem)?.ToString();
-            string? strStopBit       = (cbStopBit.SelectedItem)?.ToString();
+            string? strSerialName = (cbCom.SelectedItem)?.ToString();
+            string? strBaudRate = (cbBaudRate.SelectedItem)?.ToString();
+            string? strDataBit = (cbDataBit.SelectedItem)?.ToString();
+            string? strCheckBit = (cbCheckBit.SelectedItem)?.ToString();
+            string? strStopBit = (cbStopBit.SelectedItem)?.ToString();
 
             switch (strStopBit)
             {
@@ -387,7 +404,7 @@ namespace UserForm
             }
 
             Int32 iBaudRate = Convert.ToInt32(strBaudRate);
-            Int32 iDataBit  = Convert.ToInt32(strDataBit);
+            Int32 iDataBit = Convert.ToInt32(strDataBit);
 
             serialPort.PortName = strSerialName;
             serialPort.BaudRate = iBaudRate;
@@ -396,8 +413,8 @@ namespace UserForm
             rbtSendDataASCII.Checked = true;
             rbtReceiveDataASCII.Checked = true;
 
-            rbtReceiveDataASCII.Enabled = false;
-            rbtReceiveDataHEX.Enabled = false;
+            //rbtReceiveDataASCII.Enabled = false;
+            //rbtReceiveDataHEX.Enabled = false;
         }
 
         private void ConnectForm_FormClosing(object sender, FormClosingEventArgs e)
