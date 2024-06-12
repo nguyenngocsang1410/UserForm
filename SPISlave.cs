@@ -6,50 +6,78 @@ using System.Threading.Tasks;
 
 namespace UserForm
 {
-    public class SPISlave(string Name)
+    public class SpiSlave
     {
-        public string Name { get; set; } = Name;
-        public List<RegisterItem> Registers { get; set; } = GetRegisterList(Name);
-
-        public SlaveData Info { get; set; } = slavesInfo.Find(item => item.Name == Name) ?? new();
-
-        private static readonly List<SlaveData> slavesInfo = new()
+        // Public
+        public string Name { get; set; }
+        public RegisterItem[] Registers { get; set; }
+        public SpiSlaveItemInfo Info { get; set; }
+        public SpiSlave(string Name)
         {
-            new SlaveData(){Name = "QEC_TX1"    , Address = SlaveAddress.QEC_TX1    , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "FIR_TX1"    , Address = SlaveAddress.FIR_TX1    , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "QEC_RX1"    , Address = SlaveAddress.QEC_RX1    , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "FIR_RX1"    , Address = SlaveAddress.FIR_RX1    , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "QEC_ORX1"   , Address = SlaveAddress.QEC_ORX1   , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "FIR_ORX1"   , Address = SlaveAddress.FIR_ORX1   , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "QEC_TX2"    , Address = SlaveAddress.QEC_TX2    , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "FIR_TX2"    , Address = SlaveAddress.FIR_TX2    , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "QEC_RX2"    , Address = SlaveAddress.QEC_RX2    , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "FIR_RX2"    , Address = SlaveAddress.FIR_RX2    , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "QEC_ORX2"   , Address = SlaveAddress.QEC_ORX2   , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "FIR_ORX2"   , Address = SlaveAddress.FIR_ORX2   , RegAddressSize = 10, RegValueSize = 8},
-            new SlaveData(){Name = "RX1"        , Address = SlaveAddress.RX1        , RegAddressSize = 7 , RegValueSize = 8},
-            new SlaveData(){Name = "RX2"        , Address = SlaveAddress.RX2        , RegAddressSize = 7 , RegValueSize = 8},
-            new SlaveData(){Name = "ORX1"       , Address = SlaveAddress.ORX1       , RegAddressSize = 7 , RegValueSize = 8},
-            new SlaveData(){Name = "ORX2"       , Address = SlaveAddress.ORX2       , RegAddressSize = 7 , RegValueSize = 8},
-            new SlaveData(){Name = "TX1"        , Address = SlaveAddress.TX1        , RegAddressSize = 7 , RegValueSize = 8},
-            new SlaveData(){Name = "TX2"        , Address = SlaveAddress.TX2        , RegAddressSize = 7 , RegValueSize = 8},
-            new SlaveData(){Name = "PLL"        , Address = SlaveAddress.PLL        , RegAddressSize = 7 , RegValueSize = 8},
-            new SlaveData(){Name = "ADC1"       , Address = SlaveAddress.ADC1       , RegAddressSize = 14, RegValueSize = 32},
-            new SlaveData(){Name = "ADC2"       , Address = SlaveAddress.ADC2       , RegAddressSize = 14, RegValueSize = 32},
-            new SlaveData(){Name = "ADC3"       , Address = SlaveAddress.ADC3       , RegAddressSize = 14, RegValueSize = 32},
-            new SlaveData(){Name = "ADC4"       , Address = SlaveAddress.ADC4       , RegAddressSize = 14, RegValueSize = 32},
-            new SlaveData(){Name = "DAC1"       , Address = SlaveAddress.DAC1       , RegAddressSize = 14, RegValueSize = 32},
-            new SlaveData(){Name = "DAC2"       , Address = SlaveAddress.DAC2       , RegAddressSize = 14, RegValueSize = 32},
-            new SlaveData(){Name = "PHY"        , Address = SlaveAddress.PHY        , RegAddressSize = 6 , RegValueSize = 8},
-            new SlaveData(){Name = "RX1_RSSI"   , Address = SlaveAddress.RX1_RSSI   , RegAddressSize = 7 , RegValueSize = 10},
-            new SlaveData(){Name = "RX2_RSSI"   , Address = SlaveAddress.RX2_RSSI   , RegAddressSize = 7 , RegValueSize = 10},
-            new SlaveData(){Name = "JESD204_RX ", Address = SlaveAddress.JESD204_RX , RegAddressSize = 10, RegValueSize = 32},
-            new SlaveData(){Name = "JESD204_TX1", Address = SlaveAddress.JESD204_TX1, RegAddressSize = 10, RegValueSize = 32},
-            new SlaveData(){Name = "JESD204_TX2", Address = SlaveAddress.JESD204_TX2, RegAddressSize = 10, RegValueSize = 32},
-        };
-        private static List<RegisterItem> GetRegisterList(string Name)
+            this.Name = Name;
+            Registers = GetRegisterList(Name);
+            Info = Array.Find(slavesInfo, item => item.Name == Name) ?? new();
+        }
+        public RegisterItem[] CopyRegisterList()
         {
-            List<RegisterItem> regList;
+            RegisterItem[] regList = Registers.Select(reg => (RegisterItem)reg.Clone()).ToArray();
+
+            //// Get list without bit array
+            //RegisterItem[] regList = GetRegisterList(Name);
+
+            //for (int i = 0; i < Registers.Length; i++)
+            //{
+            //    regList[i] = (RegisterItem)(Registers[i].Clone());
+            //}
+
+            //foreach (RegisterItem reg in regList)
+            //{
+            //    reg.Value = Array.Find(Registers, item => item.Addr == reg.Addr)?.Value ?? 0;
+
+            //    RegisterItem? thisReg = Array.Find(Registers,item => item.Addr == reg.Addr);
+            //    if (thisReg != null)
+            //        reg.BitValue = [.. thisReg.BitValue];
+            //}
+
+            return regList;
+        }
+        // private
+        private static readonly SpiSlaveItemInfo[] slavesInfo = [
+            new SpiSlaveItemInfo(){Name = "QEC_TX1"    , Address = SlaveAddress.QEC_TX1    , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "FIR_TX1"    , Address = SlaveAddress.FIR_TX1    , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "QEC_RX1"    , Address = SlaveAddress.QEC_RX1    , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "FIR_RX1"    , Address = SlaveAddress.FIR_RX1    , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "QEC_ORX1"   , Address = SlaveAddress.QEC_ORX1   , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "FIR_ORX1"   , Address = SlaveAddress.FIR_ORX1   , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "QEC_TX2"    , Address = SlaveAddress.QEC_TX2    , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "FIR_TX2"    , Address = SlaveAddress.FIR_TX2    , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "QEC_RX2"    , Address = SlaveAddress.QEC_RX2    , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "FIR_RX2"    , Address = SlaveAddress.FIR_RX2    , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "QEC_ORX2"   , Address = SlaveAddress.QEC_ORX2   , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "FIR_ORX2"   , Address = SlaveAddress.FIR_ORX2   , RegAddressSize = 10, RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "RX1"        , Address = SlaveAddress.RX1        , RegAddressSize = 7 , RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "RX2"        , Address = SlaveAddress.RX2        , RegAddressSize = 7 , RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "ORX1"       , Address = SlaveAddress.ORX1       , RegAddressSize = 7 , RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "ORX2"       , Address = SlaveAddress.ORX2       , RegAddressSize = 7 , RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "TX1"        , Address = SlaveAddress.TX1        , RegAddressSize = 7 , RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "TX2"        , Address = SlaveAddress.TX2        , RegAddressSize = 7 , RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "PLL"        , Address = SlaveAddress.PLL        , RegAddressSize = 7 , RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "ADC1"       , Address = SlaveAddress.ADC1       , RegAddressSize = 14, RegValueSize = 32},
+            new SpiSlaveItemInfo(){Name = "ADC2"       , Address = SlaveAddress.ADC2       , RegAddressSize = 14, RegValueSize = 32},
+            new SpiSlaveItemInfo(){Name = "ADC3"       , Address = SlaveAddress.ADC3       , RegAddressSize = 14, RegValueSize = 32},
+            new SpiSlaveItemInfo(){Name = "ADC4"       , Address = SlaveAddress.ADC4       , RegAddressSize = 14, RegValueSize = 32},
+            new SpiSlaveItemInfo(){Name = "DAC1"       , Address = SlaveAddress.DAC1       , RegAddressSize = 14, RegValueSize = 32},
+            new SpiSlaveItemInfo(){Name = "DAC2"       , Address = SlaveAddress.DAC2       , RegAddressSize = 14, RegValueSize = 32},
+            new SpiSlaveItemInfo(){Name = "PHY"        , Address = SlaveAddress.PHY        , RegAddressSize = 6 , RegValueSize = 8},
+            new SpiSlaveItemInfo(){Name = "RX1_RSSI"   , Address = SlaveAddress.RX1_RSSI   , RegAddressSize = 7 , RegValueSize = 10},
+            new SpiSlaveItemInfo(){Name = "RX2_RSSI"   , Address = SlaveAddress.RX2_RSSI   , RegAddressSize = 7 , RegValueSize = 10},
+            new SpiSlaveItemInfo(){Name = "JESD204_RX ", Address = SlaveAddress.JESD204_RX , RegAddressSize = 10, RegValueSize = 32},
+            new SpiSlaveItemInfo(){Name = "JESD204_TX1", Address = SlaveAddress.JESD204_TX1, RegAddressSize = 10, RegValueSize = 32},
+            new SpiSlaveItemInfo(){Name = "JESD204_TX2", Address = SlaveAddress.JESD204_TX2, RegAddressSize = 10, RegValueSize = 32},
+        ];
+        private static RegisterItem[] GetRegisterList(string Name)
+        {
+            RegisterItem[] regList;
             switch (Name)
             {
                 case "QEC_TX1":
@@ -70,7 +98,8 @@ namespace UserForm
                 case "ORX2":
                 case "TX1":
                 case "TX2":
-                    return [];
+                    regList = [];
+                    break;
                 case "PLL":
                     regList = [
                         new RegisterItem() {Name = "r_ref_buf",           Addr = 0},
@@ -317,7 +346,7 @@ namespace UserForm
                                         "r_21_b2",
                                         "r_21_b1",
                                         "vco_cap_valid"];
-                    return regList;
+                    break;
                 case "ADC1":
                 case "ADC2":
                 case "ADC3":
@@ -325,7 +354,8 @@ namespace UserForm
                 case "DAC1":
                 case "DAC2":
                 case "PHY":
-                    return [];
+                    regList = [];
+                    break;
                 case "RX1_RSSI":
                 case "RX2_RSSI":
                     regList = [
@@ -370,46 +400,46 @@ namespace UserForm
                     regList[9].BitName = ["adc_dout<9>", "adc_dout<8>", "adc_dout<7>",
                                           "adc_dout<6>", "adc_dout<5>", "adc_dout<4>",
                                           "adc_dout<3>", "adc_dout<2>", "adc_dout<1>", "adc_dout<0>"];
-                    return regList;
+                    break;
                 case "JESD204_RX":
                 case "JESD204_TX1":
                 case "JESD204_TX2":
                 default:
-                    return [];
+                    regList = [];
+                    break;
             }
-        }
-        public List<RegisterItem> CopyRegister()
-        {
-            List<RegisterItem> retList = GetRegisterList(Name);
-
-            foreach (RegisterItem reg in retList)
-            {
-                reg.Value = Registers.Find(item => item.Addr == reg.Addr)?.Value ?? 0;
-
-                RegisterItem? thisReg = Registers.Find(item => item.Addr == reg.Addr);
-                if (thisReg != null)
-                    reg.BitValue = [.. thisReg.BitValue];
-            }
-            return retList;
+            return regList ?? [];
         }
     }
-
-    public class RegisterItem
+    public class SpiSlaveItemInfo
+    {
+        public string Name { get; set; } = "";
+        public int Address { get; set; }
+        public int RegAddressSize { get; set; }
+        public int RegValueSize { get; set; }
+        public string[] RegName { get; set; } = [];
+    }
+    public class RegisterItem : ICloneable
     {
         public string Name { get; set; } = "";
         public int Addr { get; set; } = 0;
         public ushort Value { get; set; } = 0;
         public bool[] BitValue { get; set; } = [];
         public string[] BitName { get; set; } = [];
+
+        public object Clone()
+        {
+            return new RegisterItem
+            {
+                Name = this.Name,
+                Addr = this.Addr,
+                Value = this.Value,
+                BitValue = (bool[])this.BitValue.Clone(),
+                BitName = (string[])this.BitName.Clone()
+            };
+        }
     }
-    public class SlaveData
-    {
-        public string Name { get; set; } = "";
-        public int Address { get; set; }
-        public int RegAddressSize { get; set; }
-        public int RegValueSize { get; set; }
-    }
-    public static class SlaveAddress
+    public class SlaveAddress
     {
         public const int QEC_TX1 = 0x01;
         public const int FIR_TX1 = 0x02;
@@ -444,6 +474,4 @@ namespace UserForm
         public const int JESD204_TX2 = 0x1F;
         public const int NA = 0xFF;
     }
-
-
 }

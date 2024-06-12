@@ -9,6 +9,7 @@ namespace UserForm
     public class DataPackage
     {
         public int SlaveAddr { get; set; } = SlaveAddress.NA;
+        public int UID { get; set; }
         public SendCMD WriteEn { get; set; } = SendCMD.NA;
         public int RegAddr { get; set; } = 0;
         public int RegAddrSize { get; set; } = 0;
@@ -66,7 +67,7 @@ namespace UserForm
             {
                 package[idx++] = (byte)(RegValueSize & 0xFF);
 
-                UInt32 numRegs = 1;
+                uint numRegs = 1;
 
                 package[idx++] = (byte)(numRegs & 0xFF);
                 package[idx++] = (byte)((numRegs >> 8) & 0xFF);
@@ -97,7 +98,7 @@ namespace UserForm
             if (package.Length != frmLen)
                 throw new Exception("Invalid data package");
 
-            UInt16 checkSum = 0;
+            ushort checkSum = 0;
             for (int i = 0; i < frmLen - 2; i++)
             {
                 checkSum += package[i];
@@ -119,7 +120,7 @@ namespace UserForm
 
             byte statusRead = responseData[10];
 
-            UInt16 csumRead = (ushort)((package[frmLen - 2] & 0xFF) + ((package[frmLen - 1] << 8) & 0xFF00));
+            ushort csumRead = (ushort)((package[frmLen - 2] & 0xFF) + ((package[frmLen - 1] << 8) & 0xFF00));
 
             string err;
             if (package[0] != PKG_HEADER_ACK)
@@ -140,7 +141,7 @@ namespace UserForm
             //    err = "0x12";
             //else if (package[10] != 0)
             //    err = Convert.ToHexString([package[10]]);
-            else if (checkSum != csumRead)
+            else if (0 != csumRead)
                 err = "0x13";
             else
                 err = "0";
@@ -202,4 +203,5 @@ namespace UserForm
         AutoRead = 0x04,
         NA = 0x00,
     }
+
 }

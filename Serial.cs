@@ -9,20 +9,24 @@ namespace UserForm
     public class Serial : SerialPort
     {
         public string Name = "Serial";
-        //public SerialPort port;
-
+        public Queue<DataPackage> pendingPackages = new();
         public Serial()
         {
             DataBits = 8;
             Parity = Parity.None;
             StopBits = StopBits.One;
+            DtrEnable = true;
+            RtsEnable = true;
         }
-
         public Serial(string name) : this()
         {
             Name = name;
         }
-        public void SetConfig(string portName, string baudRate, string dataBit, string checkBit, string stopBit)
+        public void SetConfig(string? portName, string? baudRate)
+        {
+            SetConfig(portName, baudRate, "8", "None", "1");
+        }
+        public void SetConfig(string? portName, string? baudRate, string dataBit, string checkBit, string stopBit)
         {
             PortName = portName;
 
@@ -60,22 +64,6 @@ namespace UserForm
                     break;
             }
 
-        }
-        public void Connect()
-        {
-            try
-            {
-                Open();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error");
-                throw;
-            }
-        }
-        public void DisConnect()
-        {
-            Close();
         }
     }
 }
