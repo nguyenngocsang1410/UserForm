@@ -124,11 +124,11 @@
             label4.TabIndex = 1;
             label4.Text = "Check bit";
             // 
-            // cbBaudRate
+            // cb_baudRate
             // 
             cbBaudRate.FormattingEnabled = true;
             cbBaudRate.Location = new Point(120, 71);
-            cbBaudRate.Name = "cbBaudRate";
+            cbBaudRate.Name = "cb_baudRate";
             cbBaudRate.Size = new Size(126, 28);
             cbBaudRate.TabIndex = 1;
             // 
@@ -141,11 +141,11 @@
             label3.TabIndex = 1;
             label3.Text = "Data bit";
             // 
-            // cbCom
+            // cb_comPort
             // 
             cbCom.FormattingEnabled = true;
             cbCom.Location = new Point(120, 26);
-            cbCom.Name = "cbCom";
+            cbCom.Name = "cb_comPort";
             cbCom.Size = new Size(126, 28);
             cbCom.TabIndex = 1;
             // 

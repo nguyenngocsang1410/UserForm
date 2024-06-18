@@ -9,18 +9,19 @@ namespace UserForm
     public class DataPackage
     {
         public int SlaveAddr { get; set; } = SlaveAddress.NA;
-        public int UID { get; set; }
+        public int ID { get; set; }
         public SendCMD WriteEn { get; set; } = SendCMD.NA;
         public int RegAddr { get; set; } = 0;
         public int RegAddrSize { get; set; } = 0;
         public int RegValue { get; set; } = 0;
         public int RegValueSize { get; set; } = 0;
         public string StatusCode { get; set; } = "";
-
+        public byte[] Data { get; set; } = [];
+        public byte Header = 0;
         public static readonly byte PKG_HEADER = 0x0A;
         public static readonly byte PKG_HEADER_ACK = 0xA0;
 
-        public byte[] CreatePackage()
+        public DataPackage CreatePackage()
         {
             // [HEADER:1][LEN:2][CID:1][SLAVE A:1][REG A:4][REG A S:1][REG V S:1][Number of regs:4][CRC:2]
             // [1 + 2]*0 + 1 + 1 + 4 + 1 + 4 + 1 + 2 
@@ -31,7 +32,8 @@ namespace UserForm
             int idx = 0;
 
             // Frame Header 1 byte
-            package[idx++] = PKG_HEADER;
+            Header = PKG_HEADER;
+            package[idx++] = Header;
 
             // Frame length 2 bytes
             package[idx++] = (byte)(cmdLen & 0xFF);
@@ -88,8 +90,11 @@ namespace UserForm
                 throw new Exception("Wrong frame");
             }
 
-            return package;
+            Data = package;
+            ID = checkSum;
+            return this;
         }
+        public byte[] GetData() { return Data; }
         public static DataPackage? TryParse(byte[] package)
         {
             int frmLen = 18; // + status byte
@@ -103,6 +108,7 @@ namespace UserForm
             {
                 checkSum += package[i];
             }
+            byte header = package[0];
             int cmdLenRead = package[1] + (package[2] << 8);
             int writeEnRead = package[3];
             int slaveAddrRead = package[4];
@@ -123,7 +129,7 @@ namespace UserForm
             ushort csumRead = (ushort)((package[frmLen - 2] & 0xFF) + ((package[frmLen - 1] << 8) & 0xFF00));
 
             string err;
-            if (package[0] != PKG_HEADER_ACK)
+            if (header != PKG_HEADER_ACK)
                 err = "0x10";
             else if (cmdLenRead != cmdLen)
                 err = "0x11";
@@ -148,11 +154,13 @@ namespace UserForm
 
             if (err != "0")
             {
-                error_code(err);
+                ErrorCode(err);
                 return null;
             }
             return new DataPackage()
             {
+                ID = checkSum,
+                Header = header,
                 SlaveAddr = slaveAddrRead,
                 WriteEn = (SendCMD)writeEnRead,
                 RegAddr = regAddrRead,
@@ -162,7 +170,7 @@ namespace UserForm
                 StatusCode = Convert.ToHexString([statusRead]),
             };
         }
-        public static void error_code(string error)
+        public static void ErrorCode(string error)
         {
             switch (error)
             {

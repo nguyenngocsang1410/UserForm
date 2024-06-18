@@ -17,30 +17,18 @@ namespace UserForm
             this.Name = Name;
             Registers = GetRegisterList(Name);
             Info = Array.Find(slavesInfo, item => item.Name == Name) ?? new();
+
+            foreach (RegisterItem reg in Registers)
+            {
+                reg.BitValue = Utils.ConvertByteToBoolArray(reg.Value, Info.RegValueSize);
+            }
         }
         public RegisterItem[] CopyRegisterList()
         {
             RegisterItem[] regList = Registers.Select(reg => (RegisterItem)reg.Clone()).ToArray();
-
-            //// Get list without bit array
-            //RegisterItem[] regList = GetRegisterList(Name);
-
-            //for (int i = 0; i < Registers.Length; i++)
-            //{
-            //    regList[i] = (RegisterItem)(Registers[i].Clone());
-            //}
-
-            //foreach (RegisterItem reg in regList)
-            //{
-            //    reg.Value = Array.Find(Registers, item => item.Addr == reg.Addr)?.Value ?? 0;
-
-            //    RegisterItem? thisReg = Array.Find(Registers,item => item.Addr == reg.Addr);
-            //    if (thisReg != null)
-            //        reg.BitValue = [.. thisReg.BitValue];
-            //}
-
             return regList;
         }
+
         // private
         private static readonly SpiSlaveItemInfo[] slavesInfo = [
             new SpiSlaveItemInfo(){Name = "QEC_TX1"    , Address = SlaveAddress.QEC_TX1    , RegAddressSize = 10, RegValueSize = 8},
